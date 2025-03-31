@@ -1,0 +1,25 @@
+# Jupyter & Widgets
+jupyterlab==4.2.5
+ipywidgets==8.0.6
+jupyterlab-dash==0.1.0a3
+
+# Data Science & Visualization
+numpy==1.24.3
+pandas==2.0.1
+matplotlib==3.7.1
+seaborn==0.12.2
+altair==5.0.1
+statsmodels==0.13.5
+scikit-learn==1.2.2
+
+# Deep Learning & TensorFlow
+tensorflow==2.15
+tensorflow-hub
+tensorflow-docs
+
+# Graph Visualization
+pydot
+protobuf
+
+# Testing
+pytest==7.3.1
