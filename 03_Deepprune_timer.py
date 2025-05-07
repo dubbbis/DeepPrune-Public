@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 import exifread
 from PIL import Image
+import time
 
 # --------------------------- EXIF DATA EXTRACTION --------------------------- #
 def extract_exif_data(image_file):
-    """Extracts latitude, longitude, and altitude from an image's EXIF metadata."""
     try:
         tags = exifread.process_file(image_file)
         lat = tags.get("GPS GPSLatitude")
@@ -23,7 +23,6 @@ def extract_exif_data(image_file):
         return {"Latitude": None, "Longitude": None, "Altitude": None}
 
 def convert_gps_to_decimal(gps_value, gps_ref):
-    """Converts GPS coordinates from DMS (Degrees, Minutes, Seconds) to decimal format."""
     if not gps_value:
         return None
     d = float(gps_value.values[0].num) / float(gps_value.values[0].den)
@@ -36,7 +35,6 @@ def convert_gps_to_decimal(gps_value, gps_ref):
 
 # --------------------------- GROUP IMAGES BY LATITUDE --------------------------- #
 def group_images_by_latitude(image_data, lat_threshold=0.000005):
-    """Groups images based only on latitude threshold and identifies transition images."""
     grouped_images = []
     transition_images = []
     current_group = [image_data[0]]
@@ -60,7 +58,6 @@ def group_images_by_latitude(image_data, lat_threshold=0.000005):
 
 # --------------------------- MATCH DETECTION AND VISUALIZATION --------------------------- #
 def compute_matches_and_draw(img1, img2, ratio_test):
-    """Detects matching points between two images, draws them, and returns the image with matches."""
     gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
     sift = cv2.SIFT_create()
@@ -77,7 +74,6 @@ def compute_matches_and_draw(img1, img2, ratio_test):
     return len(good_matches), img_matches
 
 # --------------------------- STREAMLIT INTERFACE --------------------------- #
-
 st.title("DeepPrune: Redundant Image Detection for Photogrammetry")
 
 uploaded_files = st.file_uploader("Upload your images", type=["jpg", "jpeg"], accept_multiple_files=True)
@@ -91,8 +87,14 @@ if uploaded_files:
     resize_width = st.sidebar.slider("Resize Width (pixels)", 320, 1280, 640, step=160)
     resize_height = st.sidebar.slider("Resize Height (pixels)", 240, 960, 480, step=120)
 
-    threshold_value = st.sidebar.slider("Match threshold for removing images", 5000, 30000, 10000)
+    threshold_value = st.sidebar.slider("Match threshold for removing images", 500, 5000, 1200)
+    st.sidebar.caption("Total matches of middle image with neighbors. If too high, fewer images are removed.")
+
     ratio_test = st.sidebar.slider("Adjust Lowe's Ratio Test", 0.5, 0.9, 0.7, 0.05)
+
+    overlap_threshold = st.sidebar.slider("Min overlap between image 1 and 3", 100, 1500, 500, 50)
+    st.sidebar.caption("Matches between image 1 and 3. If high enough, image 2 may be removed.")
+
     analyze_button = st.sidebar.button("Analyze Images")
 
     for uploaded_file in uploaded_files:
@@ -124,9 +126,18 @@ if uploaded_files:
 
     images_to_keep = [image_paths[0]] if image_paths else []
 
+    if len(image_paths) >= 3:
+        t0 = time.time()
+        compute_matches_and_draw(np.array(images[image_paths[0]]), np.array(images[image_paths[1]]), ratio_test)
+        compute_matches_and_draw(np.array(images[image_paths[1]]), np.array(images[image_paths[2]]), ratio_test)
+        t1 = time.time()
+        base_time = t1 - t0
+        estimated_time = (base_time / 2) * (len(image_paths) - 2)
+        st.info(f"⏳ Estimated processing time: {estimated_time:.2f} seconds")
+
     if analyze_button and len(images) > 2:
         st.write("### Analysis Results")
-        results = []
+        start_time = time.time()
 
         for i in range(1, len(image_paths) - 1):
             img1_path, img2_path, img3_path = image_paths[i - 1], image_paths[i], image_paths[i + 1]
@@ -137,7 +148,7 @@ if uploaded_files:
             matches_1_3, img_matches_1_3 = compute_matches_and_draw(np.array(img1), np.array(img3), ratio_test)
 
             img2_coincidences = matches_1_2 + matches_2_3
-            discard_image_2 = img2_coincidences > threshold_value and (i + 1) not in [3, 5]
+            discard_image_2 = matches_1_3 >= overlap_threshold and img2_coincidences > threshold_value
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -156,4 +167,8 @@ if uploaded_files:
                 st.success(f"The image {img2_path} is kept in the dataset.")
                 images_to_keep.append(img2_path)
 
+        end_time = time.time()
+        total_time = end_time - start_time
+
         st.success("Analysis completed!")
+        st.info(f"⏱️ Processing time: {total_time:.2f} seconds")
