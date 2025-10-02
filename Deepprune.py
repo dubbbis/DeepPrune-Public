@@ -67,13 +67,18 @@ def compute_matches_and_draw(img1, img2, ratio_test):
     kp1, des1 = sift.detectAndCompute(gray1, None)
     kp2, des2 = sift.detectAndCompute(gray2, None)
     if des1 is None or des2 is None:
-        return 0, img2
+        # Create a blank image if no features detected
+        blank = np.hstack([img1, img2])
+        return 0, cv2.cvtColor(blank, cv2.COLOR_RGB2BGR) if img1.shape[2] == 3 else blank
     index_params = dict(algorithm=1, trees=5)
     search_params = dict(checks=50)
     flann = cv2.FlannBasedMatcher(index_params, search_params)
     matches = flann.knnMatch(des1, des2, k=2)
     good_matches = [m for m, n in matches if m.distance < ratio_test * n.distance]
     img_matches = cv2.drawMatches(img1, kp1, img2, kp2, good_matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    # Convert BGR to RGB for Streamlit display
+    if img_matches is not None and img_matches.shape[2] == 3:
+        img_matches = cv2.cvtColor(img_matches, cv2.COLOR_BGR2RGB)
     return len(good_matches), img_matches
 
 # --------------------------- STREAMLIT INTERFACE --------------------------- #
@@ -141,13 +146,13 @@ if uploaded_files:
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.image(cv2.resize(img_matches_1_2, (300, 300)), caption=f"{img1_path} ↔ {img2_path}", use_container_width=True)
+                st.image(img_matches_1_2, caption=f"{img1_path} ↔ {img2_path}", use_column_width=True)
                 st.write(f"Matches: {matches_1_2}")
             with col2:
-                st.image(cv2.resize(img_matches_2_3, (300, 300)), caption=f"{img2_path} ↔ {img3_path}", use_container_width=True)
+                st.image(img_matches_2_3, caption=f"{img2_path} ↔ {img3_path}", use_column_width=True)
                 st.write(f"Matches: {matches_2_3}")
             with col3:
-                st.image(cv2.resize(img_matches_1_3, (300, 300)), caption=f"{img1_path} ↔ {img3_path}", use_container_width=True)
+                st.image(img_matches_1_3, caption=f"{img1_path} ↔ {img3_path}", use_column_width=True)
                 st.write(f"Matches: {matches_1_3}")
 
             if discard_image_2:
