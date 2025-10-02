@@ -5,11 +5,11 @@ import pandas as pd
 import exifread
 from PIL import Image
 
-# --------------------------- EXIF DATA EXTRACTION --------------------------- #
+# --------------------------- EXIF DATA EXTRACTION so far--------------------------- #
 def extract_exif_data(image_file):
     """Extracts latitude, longitude, and altitude from an image's EXIF metadata."""
     try:
-        tags = exifread.process_file(image_file)
+        tags = exifread.process_file(image_file) 
         lat = tags.get("GPS GPSLatitude")
         lon = tags.get("GPS GPSLongitude")
         alt = tags.get("GPS GPSAltitude")
