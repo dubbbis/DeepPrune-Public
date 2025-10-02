@@ -18,8 +18,6 @@ Essentially, **DeepPrune** is a CNN-based model designed to identify and discard
 
 ## Set up your Environment
 
-
-
 ### **`macOS`** type the following commands : 
 
 - For installing the virtual environment you can either use the [Makefile](Makefile) and run `make setup` or install it manually with the following commands:
@@ -71,3 +69,76 @@ Or ....
     ```Bash
     python.exe -m pip install --upgrade pip
     ```
+
+---
+
+## Running with Docker
+
+If you prefer to use Docker instead of setting up a local Python environment, you can run DeepPrune in a containerized environment.
+
+### Prerequisites
+- Docker installed on your computer ([Download Docker](https://www.docker.com/get-started))
+
+### Quick Start
+
+1. **Build the Docker image:**
+   ```bash
+   docker build -t deepprune .
+   ```
+
+2. **Run the application:**
+   ```bash
+   docker run -p 8501:8501 deepprune
+   ```
+
+3. **Access the application:**
+   - Open your web browser
+   - Go to: **http://localhost:8501**
+
+4. **Stop the application:**
+   - Press `Ctrl+C` in the terminal
+
+### Run in Background (Detached Mode)
+
+If you want to run the container in the background:
+
+```bash
+# Start the container
+docker run -d -p 8501:8501 --name deepprune-app deepprune
+
+# View logs
+docker logs -f deepprune-app
+
+# Stop the container
+docker stop deepprune-app
+
+# Remove the container
+docker rm deepprune-app
+```
+
+### Docker Troubleshooting
+
+**Port Already in Use:**
+If port 8501 is already in use, change it to another port:
+```bash
+docker run -p 8502:8501 deepprune
+```
+Then access the app at `http://localhost:8502`
+
+**Rebuild from Scratch:**
+```bash
+docker build --no-cache -t deepprune .
+docker run -p 8501:8501 deepprune
+```
+
+**Remove All Stopped Containers:**
+```bash
+docker container prune
+```
+
+**Remove Image:**
+```bash
+docker rmi deepprune
+```
+
+---
